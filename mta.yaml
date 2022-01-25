@@ -1,0 +1,92 @@
+_schema-version: "3.2"
+ID: test_app_demo
+version: 0.0.1
+modules:
+- name: test_app_demo-destination-content
+  type: com.sap.application.content
+  requires:
+  - name: test_app_demo-destination-service
+    parameters:
+      content-target: true
+  - name: test_app_demo_html_repo_host
+    parameters:
+      service-key:
+        name: test_app_demo_html_repo_host-key
+  - name: uaa_test_app_demo
+    parameters:
+      service-key:
+        name: uaa_test_app_demo-key
+  parameters:
+    content:
+      instance:
+        destinations:
+        - Name: test_app_demo_test_app_demo_html_repo_host
+          ServiceInstanceName: test_app_demo-html5-app-host-service
+          ServiceKeyName: test_app_demo_html_repo_host-key
+          sap.cloud.service: test_app_demo
+        - Authentication: OAuth2UserTokenExchange
+          Name: test_app_demo_uaa_test_app_demo
+          ServiceInstanceName: test_app_demo-xsuaa-service
+          ServiceKeyName: uaa_test_app_demo-key
+          sap.cloud.service: test_app_demo
+        existing_destinations_policy: ignore
+  build-parameters:
+    no-source: true
+- name: test_app_demo-app-content
+  type: com.sap.application.content
+  path: .
+  requires:
+  - name: test_app_demo_html_repo_host
+    parameters:
+      content-target: true
+  build-parameters:
+    build-result: resources
+    requires:
+    - artifacts:
+      - testui.zip
+      name: testui
+      target-path: resources/
+- name: testui
+  type: html5
+  path: test_ui
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm install
+    - npm run build:cf
+    supported-platforms: []
+resources:
+- name: test_app_demo-destination-service
+  type: org.cloudfoundry.managed-service
+  parameters:
+    config:
+      HTML5Runtime_enabled: true
+      init_data:
+        instance:
+          destinations:
+          - Authentication: NoAuthentication
+            Name: ui5
+            ProxyType: Internet
+            Type: HTTP
+            URL: https://ui5.sap.com
+          existing_destinations_policy: update
+      version: 1.0.0
+    service: destination
+    service-name: test_app_demo-destination-service
+    service-plan: lite
+- name: test_app_demo_html_repo_host
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: html5-apps-repo
+    service-name: test_app_demo-html5-app-host-service
+    service-plan: app-host
+- name: uaa_test_app_demo
+  type: org.cloudfoundry.managed-service
+  parameters:
+    path: ./xs-security.json
+    service: xsuaa
+    service-name: test_app_demo-xsuaa-service
+    service-plan: application
+parameters:
+  deploy_mode: html5-repo
